@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER">
+		<attributes>
+			<attribute name="module" value="true"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry exported="true" kind="lib" path="lib/javr-1.1.2.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/tinyboy-coverage/javr-doc.zip!/javr-doc"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry exported="true" kind="lib" path="lib/tinyboy-1.2.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/tinyboy-coverage/tb-doc.zip!/tinyboy"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
