@@ -34,8 +34,14 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
 	public TinyBoyInputGenerator() {
 		// FIXME: this is a very simplistic and poor implementation. However, it
 		// illustrates how to create input sequences!
-		this.worklist.add(new TinyBoyInputSequence(ControlPad.Button.LEFT,ControlPad.Button.UP));
-		this.worklist.add(new TinyBoyInputSequence(ControlPad.Button.LEFT,ControlPad.Button.LEFT));
+		//this.worklist.add(new TinyBoyInputSequence(ControlPad.Button.LEFT,ControlPad.Button.UP));
+		//this.worklist.add(new TinyBoyInputSequence(ControlPad.Button.LEFT,ControlPad.Button.LEFT));
+		for(int i = 0; i < NUM_BUTTONS; i++) {
+			for(int j = 0; j < NUM_BUTTONS; j++) {
+				this.worklist.add(new TinyBoyInputSequence(ControlPad.Button.values()[i],ControlPad.Button.values()[j]));
+			}
+		}
+
 	}
 
 	@Override
