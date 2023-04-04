@@ -27,6 +27,13 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
 	 * Current batch being processed
 	 */
 	private ArrayList<TinyBoyInputSequence> worklist = new ArrayList<>();
+	
+	private ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> recordedInputs = new ArrayList<>();
+	
+	
+	public record Triple<T, U, V>(T first, U second, V Third) {
+	}
+
 
 	/**
 	 * Create new input generator for the TinyBoy simulation.
@@ -73,7 +80,81 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
 		// At this point, you will want to use the feedback gained from fuzzing to help
 		// prune the space of inputs to try next. A few helper methods are given below,
 		// but you will need to write a lot more.
+		recordedInputs.add(new Triple<>(input, coverage, state));
+		
+	    ArrayList<TinyBoyInputSequence> prunedInputs = new ArrayList<>();
+	    
+	    for(Triple<TinyBoyInputSequence, BitSet, byte[]> recordedInput1 : recordedInputs) {
+	        boolean subsumed = false;
+	        boolean identicalState = false;
+
+	        for (Triple<TinyBoyInputSequence, BitSet, byte[]> recordedInput2 : recordedInputs) {
+	            if (recordedInput1 != recordedInput2 && subsumedBy(recordedInput1.second, recordedInput2.second)) {
+	                subsumed = true;
+	                break;
+	            }
+	            if (recordedInput1 != recordedInput2 && recordedInput1.Third().equals(recordedInput2.Third())) {
+	                identicalState = true;
+	                break;
+	            }
+//	            if (recordedInput1 != recordedInput2 && areArraysEqual(recordedInput1.Third(), recordedInput2.Third())) {
+//	                identicalState = true;
+//	                break;
+//	            }
+
+	            
+	        }
+	        if (!subsumed && !identicalState) {
+	            prunedInputs.add(recordedInput1.first);
+	        }
+
+	    }
+	    
+	    worklist.clear();
+	    for (TinyBoyInputSequence prunedInput : prunedInputs) {
+	        for (int i = 0; i < NUM_BUTTONS; i++) {
+	            worklist.add(prunedInput.append(ControlPad.Button.values()[i]));
+	        }
+	    }
+	    
+        //randomSample(prunedInputs, 5);
+
+	    //worklist.addAll(prunedInputs);
+	    
+        //randomSample(worklist, 5);
+
+	    
+	    System.out.println("Worklist size: " + worklist.size());	    
+//	    // Limit the worklist size to a maximum value, e.g., 100
+//	    if (worklist.size() > 5) {
+//	        randomSample(worklist, 5);
+//	    }
+		
+		
 	}
+	
+	
+//	/**
+//	 * Checks if every item in the two input integer arrays are equal to each other.
+//	 *
+//	 * @param arr1 the first integer array to compare
+//	 * @param arr2 the second integer array to compare
+//	 * @return true if every item in both arrays is equal, false otherwise
+//	 */
+//	public static boolean areArraysEqual(byte[] arr1, byte[] arr2) {
+//	    if (arr1.length != arr2.length) {
+//	        return false;
+//	    }
+//	    
+//	    for (int i = 0; i < arr1.length; i++) {
+//	        if (arr1[i] != arr2[i]) {
+//	            return false;
+//	        }
+//	    }
+//	    
+//	    return true;
+//	}
+
 
 	/**
 	 * Check whether a given input sequence is completely subsumed by another.
