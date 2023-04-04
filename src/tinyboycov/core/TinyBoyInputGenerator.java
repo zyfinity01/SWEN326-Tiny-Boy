@@ -8,6 +8,7 @@ import java.util.List;
 import org.eclipse.jdt.annotation.Nullable;
 
 import tinyboy.core.ControlPad;
+import tinyboy.core.ControlPad.Button;
 import tinyboy.core.TinyBoyInputSequence;
 import tinyboy.util.AutomatedTester;
 
@@ -23,6 +24,9 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
 	 * Represents the number of buttons on the control pad.
 	 */
 	private final static int NUM_BUTTONS = ControlPad.Button.values().length;
+	
+	private final static int N = 10; // length of the input sequence
+	
 	/**
 	 * Current batch being processed
 	 */
@@ -43,12 +47,52 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
 		// illustrates how to create input sequences!
 		//this.worklist.add(new TinyBoyInputSequence(ControlPad.Button.LEFT,ControlPad.Button.UP));
 		//this.worklist.add(new TinyBoyInputSequence(ControlPad.Button.LEFT,ControlPad.Button.LEFT));
-		for(int i = 0; i < NUM_BUTTONS; i++) {
-			for(int j = 0; j < NUM_BUTTONS; j++) {
-				this.worklist.add(new TinyBoyInputSequence(ControlPad.Button.values()[i],ControlPad.Button.values()[j]));
-			}
+//		for(int i = 0; i < NUM_BUTTONS; i++) {
+//			for(int j = 0; j < NUM_BUTTONS; j++) {
+//				this.worklist.add(new TinyBoyInputSequence(ControlPad.Button.values()[i],ControlPad.Button.values()[j]));
+//			}
+//		}
+		this.worklist.clear();
+		
+		for(int sequenceLength = N; sequenceLength > 0; sequenceLength--) {
+			this.worklist.addAll(generateCombinations(NUM_BUTTONS, sequenceLength));
 		}
+        
+//        for(TinyBoyInputSequence seq : worklist) {
+//        	System.out.println(seq.toString());
+//        }
 
+
+	}
+	
+	public ArrayList<TinyBoyInputSequence> generateCombinations(int numButtons, int sequenceLength) {
+	    ArrayList<TinyBoyInputSequence> combinations = new ArrayList<>();
+	    int[] indexes = new int[sequenceLength];
+	    
+	    while (true) {
+	        ControlPad.Button[] sequence = new ControlPad.Button[sequenceLength];
+	        for (int i = 0; i < sequenceLength; i++) {
+	            sequence[i] = ControlPad.Button.values()[indexes[i]];
+	        }
+	        combinations.add(new TinyBoyInputSequence(sequence));
+
+	        // Move to the next combination
+	        int i;
+	        for (i = sequenceLength - 1; i >= 0; i--) {
+	            if (indexes[i] < numButtons - 1) {
+	                indexes[i]++;
+	                break;
+	            } else {
+	                indexes[i] = 0;
+	            }
+	        }
+	        
+	        if (i < 0) {
+	            break;
+	        }
+	    }
+	    
+	    return combinations;
 	}
 
 	@Override
@@ -80,54 +124,54 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
 		// At this point, you will want to use the feedback gained from fuzzing to help
 		// prune the space of inputs to try next. A few helper methods are given below,
 		// but you will need to write a lot more.
-		recordedInputs.add(new Triple<>(input, coverage, state));
+//		recordedInputs.add(new Triple<>(input, coverage, state));
 		
 	    ArrayList<TinyBoyInputSequence> prunedInputs = new ArrayList<>();
-	    
-	    for(Triple<TinyBoyInputSequence, BitSet, byte[]> recordedInput1 : recordedInputs) {
-	        boolean subsumed = false;
-	        boolean identicalState = false;
-
-	        for (Triple<TinyBoyInputSequence, BitSet, byte[]> recordedInput2 : recordedInputs) {
-	            if (recordedInput1 != recordedInput2 && subsumedBy(recordedInput1.second, recordedInput2.second)) {
-	                subsumed = true;
-	                break;
-	            }
-	            if (recordedInput1 != recordedInput2 && recordedInput1.Third().equals(recordedInput2.Third())) {
-	                identicalState = true;
-	                break;
-	            }
-//	            if (recordedInput1 != recordedInput2 && areArraysEqual(recordedInput1.Third(), recordedInput2.Third())) {
+//	    
+//	    for(Triple<TinyBoyInputSequence, BitSet, byte[]> recordedInput1 : recordedInputs) {
+//	        boolean subsumed = false;
+//	        boolean identicalState = false;
+//
+//	        for (Triple<TinyBoyInputSequence, BitSet, byte[]> recordedInput2 : recordedInputs) {
+//	            if (recordedInput1 != recordedInput2 && subsumedBy(recordedInput1.second, recordedInput2.second)) {
+//	                subsumed = true;
+//	                break;
+//	            }
+//	            if (recordedInput1 != recordedInput2 && recordedInput1.Third().equals(recordedInput2.Third())) {
 //	                identicalState = true;
 //	                break;
 //	            }
-
-	            
-	        }
-	        if (!subsumed && !identicalState) {
-	            prunedInputs.add(recordedInput1.first);
-	        }
-
-	    }
-	    
-	    worklist.clear();
-	    for (TinyBoyInputSequence prunedInput : prunedInputs) {
-	        for (int i = 0; i < NUM_BUTTONS; i++) {
-	            worklist.add(prunedInput.append(ControlPad.Button.values()[i]));
-	        }
-	    }
-	    
-        //randomSample(prunedInputs, 5);
-
-	    //worklist.addAll(prunedInputs);
-	    
-        //randomSample(worklist, 5);
-
-	    
-	    System.out.println("Worklist size: " + worklist.size());	    
+////	            if (recordedInput1 != recordedInput2 && areArraysEqual(recordedInput1.Third(), recordedInput2.Third())) {
+////	                identicalState = true;
+////	                break;
+////	            }
+//
+//	            
+//	        }
+//	        if (!subsumed && !identicalState) {
+//	            prunedInputs.add(recordedInput1.first);
+//	        }
+//
+//	    }
+//	    
+//	    worklist.clear();
+//	    for (TinyBoyInputSequence prunedInput : prunedInputs) {
+//	        for (int i = 0; i < NUM_BUTTONS; i++) {
+//	            worklist.add(prunedInput.append(ControlPad.Button.values()[i]));
+//	        }
+//	    }
+//	    
+//        //randomSample(prunedInputs, 5);
+//
+//	    //worklist.addAll(prunedInputs);
+//	    
+//        //randomSample(worklist, 5);
+//
+//	    
+//	    System.out.println("Worklist size: " + worklist.size());	    
 //	    // Limit the worklist size to a maximum value, e.g., 100
-//	    if (worklist.size() > 5) {
-//	        randomSample(worklist, 5);
+//	    if (worklist.size() > 100) {
+//	        randomSample(worklist, 100);
 //	    }
 		
 		
