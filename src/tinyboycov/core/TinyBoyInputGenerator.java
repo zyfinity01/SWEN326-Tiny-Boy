@@ -1,6 +1,7 @@
 package tinyboycov.core;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
@@ -54,11 +55,11 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
 //				this.worklist.add(new TinyBoyInputSequence(ControlPad.Button.values()[i],ControlPad.Button.values()[j]));
 //			}
 //		}
-		this.n = 1;
+		this.n = 2;
 		this.worklist.clear();
 
 		for (int sequenceLength = n; sequenceLength > 0; sequenceLength--) {
-			this.worklist.addAll(generateCombinations(NUM_BUTTONS, sequenceLength));
+			this.worklist.addAll(generateCombinations(NUM_BUTTONS+1, sequenceLength));
 		}
 		
 		numberOfInputs = this.worklist.size();
@@ -68,6 +69,17 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
 //        	System.out.println(seq.toString());
 //        }
 
+	}
+	
+	/**
+	 * Retrieve all possible button presses, including no press.
+	 * @return an array of ControlPad buttons, including null
+	 */
+	private static ControlPad.Button[] getValues() {
+	    ControlPad.Button[] allButtons = ControlPad.Button.values();
+	    ControlPad.Button[] buttonsWithNull = Arrays.copyOf(allButtons, allButtons.length + 1);
+	    buttonsWithNull[allButtons.length] = null;
+	    return buttonsWithNull;
 	}
 
 	/**
@@ -86,7 +98,7 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
 		while (true) {
 			ControlPad.Button[] sequence = new ControlPad.Button[sequenceLength];
 			for (int i = 0; i < sequenceLength; i++) {
-				sequence[i] = ControlPad.Button.values()[indexes[i]];
+				sequence[i] = getValues()[indexes[i]];
 			}
 			combinations.add(new TinyBoyInputSequence(sequence));
 
@@ -137,20 +149,24 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
 		//
 		// At this point, you will want to use the feedback gained from fuzzing to help
 		// prune the space of inputs to try next. A few helper methods are given below,
-    	if(n >= 10) return;
+    	//if(n >= 15) return;
     	System.out.println("N: " + n);
-    	System.out.println("input: " + input.toString());
-    	System.out.println("numberOfInputs: " + numberOfInputs);
-    	System.out.println("recordedInputs: " + recordedInputs.size());
+    	//System.out.println("input: " + input.toString());
+    	//System.out.println("numberOfInputs: " + numberOfInputs);
+    	//System.out.println("recordedInputs: " + recordedInputs.size());
     	
-	    if(numberOfInputs != recordedInputs.size()+1) {
-	    	recordedInputs.add(new Triple<>(input, coverage, state));
-	    } else {
-	    	System.out.println("Before prune: " + recordedInputs.size());
-	    	this.worklist = addOneToAllSequences(convertTripleToSequence(pruneInputs(recordedInputs))); 	
-	    	System.out.println("After prune: " + worklist.size());
+    	//doing plus one actually misses out on the very last possible input
+	    //if(numberOfInputs != recordedInputs.size()+1) {
+    	
+	    recordedInputs.add(new Triple<>(input, coverage, state));
+	    if(numberOfInputs == recordedInputs.size()) {
+	    	//System.out.println("Before prune: " + recordedInputs.size());
+	    	this.worklist = addOneToAllSequences(convertTripleToSequence(pruneInputs(recordedInputs))); 
+	    	randomSample(this.worklist, 100);
+	    	recordedInputs.clear();
+	    	//System.out.println("After prune: " + worklist.size());
 	    	numberOfInputs = worklist.size();
-	    	System.out.println("Worklist size: " + this.worklist.size());
+	    	//System.out.println("Worklist size: " + this.worklist.size());
 	    }
 
 		
@@ -158,31 +174,26 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
 	}
 	
 	public ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> pruneInputs(ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> inputs) {
-		ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> prunedInputs = new ArrayList<>();
+		ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> prunedInputs = new ArrayList<>(inputs);
 		
-	    for (Triple<TinyBoyInputSequence, BitSet, byte[]> recordedInput1 : inputs) {
-	    	boolean sameState = false;
-	    	boolean subsumed = false;
-	        for (Triple<TinyBoyInputSequence, BitSet, byte[]> recordedInput2 : inputs) {
-	        	//if comparing the same input
-	        	if(recordedInput1 == recordedInput2) break;
-	        	
-//	        	//if same state
-//	        	if(recordedInput1.Third().equals(recordedInput2.Third())) {
-//	        		sameState = true;
-//	        	}
-//	        	
-//	        	if(subsumedBy(recordedInput1.second(), recordedInput2.second())) {
-//
-//	        		subsumed = true;
-//	        	}
-	        	
-	        	
-	        }
-	        if(!sameState && !subsumed) {
-	        	prunedInputs.add(recordedInput1);
-	        }
-	    }
+		for(int i = prunedInputs.size()-1; i >= 0; i--) {
+			byte[] recordedState1 = prunedInputs.get(i).Third();
+			BitSet recordedCoverage1 = prunedInputs.get(i).second();
+		    for(int j = prunedInputs.size()-1; j >= 0; j--) {
+				if(prunedInputs.get(i) != prunedInputs.get(j)) {
+					byte[] recordedState2 = prunedInputs.get(j).Third();
+					BitSet recordedCoverage2 = prunedInputs.get(j).second();
+		        	if(Arrays.equals(recordedState1, recordedState2)) {
+		        		prunedInputs.remove(i);
+		        		break;
+		        	} 
+//		        	else if(subsumedBy(recordedCoverage1, recordedCoverage2)) {
+//		        		prunedInputs.remove(i);
+//		        		break;
+//		        	}
+				}
+			}
+		}
 	    return prunedInputs;
 	}
 	
@@ -201,11 +212,12 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
 		ArrayList<TinyBoyInputSequence> output = new ArrayList<>();
 		
 		for (TinyBoyInputSequence sequence : inputs) {
-			for(int i = 0; i < NUM_BUTTONS; i++) {
-				TinyBoyInputSequence newSequence = new TinyBoyInputSequence(sequence);
-				newSequence.append(ControlPad.Button.values()[i]);
-				output.add(newSequence);
-				System.out.println("Button: "+ ControlPad.Button.values()[i]);
+			for(int i = 0; i < NUM_BUTTONS+1; i++) {
+				//TinyBoyInputSequence newSequence = new TinyBoyInputSequence(sequence.append);
+				//newSequence.append(ControlPad.Button.values()[i]);
+				
+				output.add(sequence.append(getValues()[i]));
+				System.out.println("Button: "+ getValues()[i]);
 			}
 		}
 		
