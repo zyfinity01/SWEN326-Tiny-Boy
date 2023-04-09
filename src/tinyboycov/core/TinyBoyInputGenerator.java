@@ -6,6 +6,9 @@ import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+
+import org.eclipse.jdt.annotation.Nullable;
+
 import tinyboy.core.ControlPad;
 import tinyboy.core.TinyBoyInputSequence;
 import tinyboy.util.AutomatedTester;
@@ -56,7 +59,7 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
    */
   public record Triple<T, U, V>(T first, U second, V third) {
     @Override
-    public boolean equals(Object obj) {
+    public boolean equals(@Nullable Object obj) {
       if (this == obj) {
         return true;
       }
