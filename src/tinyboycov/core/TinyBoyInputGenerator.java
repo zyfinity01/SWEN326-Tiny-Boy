@@ -5,11 +5,8 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
-
-import org.eclipse.jdt.annotation.Nullable;
-
+import java.util.Objects;
 import tinyboy.core.ControlPad;
-import tinyboy.core.ControlPad.Button;
 import tinyboy.core.TinyBoyInputSequence;
 import tinyboy.util.AutomatedTester;
 
@@ -21,268 +18,271 @@ import tinyboy.util.AutomatedTester;
  *
  */
 public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<TinyBoyInputSequence> {
-	/**
-	 * Represents the number of buttons on the control pad.
-	 */
-	private final static int NUM_BUTTONS = ControlPad.Button.values().length;
+  /**
+   * Represents the number of buttons on the control pad.
+   */
+  private final static int NUM_BUTTONS = ControlPad.Button.values().length;
 
-	private int n; // length of the input sequence
+  /**
+   * The global input sequence length.
+   */
+  private int seqLength;
 
-	/**
-	 * Current batch being processed
-	 */
-	private ArrayList<TinyBoyInputSequence> worklist = new ArrayList<>();
+  /**
+   * Current batch being processed.
+   */
+  private ArrayList<TinyBoyInputSequence> worklist = new ArrayList<>();
 
-	private ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> recordedInputs = new ArrayList<>();
-	
-	private int numberOfInputs;
+  /**
+   * Inputs that are recorded for pruning purposes.
+   */
+  private ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> recordedInputs =
+      new ArrayList<>();
 
-	public record Triple<T, U, V> (T first, U second, V Third) {
-	}
+  /**
+   * record what the number of inputs were before worklist is emptied.
+   */
+  private int numberOfInputs;
 
-	/**
-	 * Create new input generator for the TinyBoy simulation.
-	 */
-	public TinyBoyInputGenerator() {
-		// FIXME: this is a very simplistic and poor implementation. However, it
-		// illustrates how to create input sequences!
-		// this.worklist.add(new
-		// TinyBoyInputSequence(ControlPad.Button.LEFT,ControlPad.Button.UP));
-		// this.worklist.add(new
-		// TinyBoyInputSequence(ControlPad.Button.LEFT,ControlPad.Button.LEFT));
-//		for(int i = 0; i < NUM_BUTTONS; i++) {
-//			for(int j = 0; j < NUM_BUTTONS; j++) {
-//				this.worklist.add(new TinyBoyInputSequence(ControlPad.Button.values()[i],ControlPad.Button.values()[j]));
-//			}
-//		}
-		this.n = 2;
-		this.worklist.clear();
+  /**
+   * Allows for easy storing of three elements, overidden functions are to conform
+   * to safety critical standards.
+   *
+   * @author niraj
+   *
+   * @param <T> element 1
+   * @param <U> element 2
+   * @param <V> element 3
+   */
+  public record Triple<T, U, V>(T first, U second, V third) {
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) {
+        return true;
+      }
+      if (obj == null || getClass() != obj.getClass()) {
+        return false;
+      }
+      Triple<?, ?, ?> other = (Triple<?, ?, ?>) obj;
+      return Objects.equals(this.first, other.first) && Objects.equals(this.second, other.second)
+          && Objects.equals(this.third, other.third);
+    }
 
-		for (int sequenceLength = n; sequenceLength > 0; sequenceLength--) {
-			this.worklist.addAll(generateCombinations(NUM_BUTTONS+1, sequenceLength));
-		}
-		
-		numberOfInputs = this.worklist.size();
-		System.out.println("number of inputs: " + numberOfInputs);
+    @Override
+    public int hashCode() {
+      return Objects.hash(this.first, this.second, this.third);
+    }
+  }
 
-//        for(TinyBoyInputSequence seq : worklist) {
-//        	System.out.println(seq.toString());
-//        }
+  /**
+   * Create new input generator for the TinyBoy simulation.
+   */
+  public TinyBoyInputGenerator() {
+    this.seqLength = 2;
+    this.worklist.clear();
 
-	}
-	
-	/**
-	 * Retrieve all possible button presses, including no press.
-	 * @return an array of ControlPad buttons, including null
-	 */
-	private static ControlPad.Button[] getValues() {
-	    ControlPad.Button[] allButtons = ControlPad.Button.values();
-	    ControlPad.Button[] buttonsWithNull = Arrays.copyOf(allButtons, allButtons.length + 1);
-	    buttonsWithNull[allButtons.length] = null;
-	    return buttonsWithNull;
-	}
+    for (int sequenceLength = this.seqLength; sequenceLength > 0; sequenceLength--) {
+      this.worklist.addAll(generateCombinations(NUM_BUTTONS + 1, sequenceLength));
+    }
 
-	/**
-	 * Generates all possible combinations of button presses for a given number of
-	 * buttons and sequence length.
-	 *
-	 * @param numButtons     the number of buttons available for pressing
-	 * @param sequenceLength the length of each input sequence
-	 * @return an ArrayList of TinyBoyInputSequence objects, each representing a
-	 *         unique combination of button presses
-	 */
-	public ArrayList<TinyBoyInputSequence> generateCombinations(int numButtons, int sequenceLength) {
-		ArrayList<TinyBoyInputSequence> combinations = new ArrayList<>();
-		int[] indexes = new int[sequenceLength];
+    this.numberOfInputs = this.worklist.size();
+  }
 
-		while (true) {
-			ControlPad.Button[] sequence = new ControlPad.Button[sequenceLength];
-			for (int i = 0; i < sequenceLength; i++) {
-				sequence[i] = getValues()[indexes[i]];
-			}
-			combinations.add(new TinyBoyInputSequence(sequence));
+  /**
+   * Retrieve all possible button presses, including no press.
+   *
+   * @return an array of ControlPad buttons, including null
+   */
+  private static ControlPad.Button[] getValues() {
+    ControlPad.Button[] allButtons = ControlPad.Button.values();
+    ControlPad.Button[] buttonsWithNull = Arrays.copyOf(allButtons, allButtons.length + 1);
+    buttonsWithNull[allButtons.length] = null;
+    return buttonsWithNull;
+  }
 
-			// Move to the next combination
-			int i;
-			for (i = sequenceLength - 1; i >= 0; i--) {
-				if (indexes[i] < numButtons - 1) {
-					indexes[i]++;
-					break;
-				} else {
-					indexes[i] = 0;
-				}
-			}
+  /**
+   * Generates all possible combinations of button presses for a given number of
+   * buttons and sequence length.
+   *
+   * @param numButtons     the number of buttons available for pressing
+   * @param sequenceLength the length of each input sequence
+   * @return an ArrayList of TinyBoyInputSequence objects, each representing a
+   *         unique combination of button presses
+   */
+  public static ArrayList<TinyBoyInputSequence> generateCombinations(int numButtons,
+      int sequenceLength) {
+    ArrayList<TinyBoyInputSequence> combinations = new ArrayList<>();
+    int[] indexes = new int[sequenceLength];
 
-			if (i < 0) {
-				break;
-			}
-		}
+    while (true) {
+      ControlPad.Button[] sequence = new ControlPad.Button[sequenceLength];
+      for (int i = 0; i < sequenceLength; i++) {
+        sequence[i] = getValues()[indexes[i]];
+      }
+      combinations.add(new TinyBoyInputSequence(sequence));
 
-		return combinations;
-	}
+      // Move to the next combination
+      int i;
+      for (i = sequenceLength - 1; i >= 0; i--) {
+        if (indexes[i] < numButtons - 1) {
+          indexes[i]++;
+          break;
+        }
+        indexes[i] = 0;
+      }
 
-	@Override
-	public boolean hasMore() {
-		return this.worklist.size() > 0;
-	}
+      if (i < 0) {
+        break;
+      }
+    }
+    return combinations;
+  }
 
-	@Override
-	public @Nullable TinyBoyInputSequence generate() {
-		if (!this.worklist.isEmpty()) {
-			// remove last item from worklist
-			return this.worklist.remove(this.worklist.size() - 1);
-		}
-		return null;
-	}
+  @Override
+  public boolean hasMore() {
+    return this.worklist.size() > 0;
+  }
 
-	/**
-	 * A record returned from the fuzzer indicating the coverage and final state
-	 * obtained for a given input sequence.
-	 */
-	@Override
-	public void record(TinyBoyInputSequence input, BitSet coverage, byte[] state) {
-		// NOTE: this method is called when fuzzing has finished for a given input. It
-		// produces three potentially useful items: firstly, the input sequence that was
-		// used for fuzzing; second, the set of instructions which were covered when
-		// executing that sequence; finally, the complete state of the machine's RAM at
-		// the end of the run.
-		//
-		// At this point, you will want to use the feedback gained from fuzzing to help
-		// prune the space of inputs to try next. A few helper methods are given below,
-    	//if(n >= 15) return;
-    	System.out.println("N: " + n);
-    	//System.out.println("input: " + input.toString());
-    	//System.out.println("numberOfInputs: " + numberOfInputs);
-    	//System.out.println("recordedInputs: " + recordedInputs.size());
-    	
-    	//doing plus one actually misses out on the very last possible input
-	    //if(numberOfInputs != recordedInputs.size()+1) {
-    	
-	    recordedInputs.add(new Triple<>(input, coverage, state));
-	    if(numberOfInputs == recordedInputs.size()) {
-	    	//System.out.println("Before prune: " + recordedInputs.size());
-	    	this.worklist = addOneToAllSequences(convertTripleToSequence(pruneInputs(recordedInputs))); 
-	    	randomSample(this.worklist, 100);
-	    	recordedInputs.clear();
-	    	//System.out.println("After prune: " + worklist.size());
-	    	numberOfInputs = worklist.size();
-	    	//System.out.println("Worklist size: " + this.worklist.size());
-	    }
+  @Override
+  public @Nullable TinyBoyInputSequence generate() {
+    if (!this.worklist.isEmpty()) {
+      // remove last item from worklist
+      return this.worklist.remove(this.worklist.size() - 1);
+    }
+    return null;
+  }
 
-		
+  /**
+   * A record returned from the fuzzer indicating the coverage and final state
+   * obtained for a given input sequence.
+   */
+  @Override
+  public void record(TinyBoyInputSequence input, BitSet coverage, byte[] state) {
+    this.recordedInputs.add(new Triple<>(input, coverage, state));
+    if (this.numberOfInputs == this.recordedInputs.size()) {
+      this.worklist = addOneToAllSequences(
+          convertTripleToSequence(pruneInputs(this.recordedInputs)));
+      randomSample(this.worklist, 50);
+      this.recordedInputs.clear();
+      this.numberOfInputs = this.worklist.size();
+    }
 
-	}
-	
-	public ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> pruneInputs(ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> inputs) {
-		ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> prunedInputs = new ArrayList<>(inputs);
-		
-		for(int i = prunedInputs.size()-1; i >= 0; i--) {
-			byte[] recordedState1 = prunedInputs.get(i).Third();
-			BitSet recordedCoverage1 = prunedInputs.get(i).second();
-		    for(int j = prunedInputs.size()-1; j >= 0; j--) {
-				if(prunedInputs.get(i) != prunedInputs.get(j)) {
-					byte[] recordedState2 = prunedInputs.get(j).Third();
-					BitSet recordedCoverage2 = prunedInputs.get(j).second();
-		        	if(Arrays.equals(recordedState1, recordedState2)) {
-		        		prunedInputs.remove(i);
-		        		break;
-		        	} 
-//		        	else if(subsumedBy(recordedCoverage1, recordedCoverage2)) {
-//		        		prunedInputs.remove(i);
-//		        		break;
-//		        	}
-				}
-			}
-		}
-	    return prunedInputs;
-	}
-	
-	public ArrayList<TinyBoyInputSequence> convertTripleToSequence(ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> inputs){
-		ArrayList<TinyBoyInputSequence> output = new ArrayList<>();
-		
-		for (Triple<TinyBoyInputSequence, BitSet, byte[]> input : inputs) {
-			output.add(input.first);
-		}
-		return output;
-	}
-	
-	
-	public ArrayList<TinyBoyInputSequence> addOneToAllSequences(ArrayList<TinyBoyInputSequence> inputs){
-		n++;
-		ArrayList<TinyBoyInputSequence> output = new ArrayList<>();
-		
-		for (TinyBoyInputSequence sequence : inputs) {
-			for(int i = 0; i < NUM_BUTTONS+1; i++) {
-				//TinyBoyInputSequence newSequence = new TinyBoyInputSequence(sequence.append);
-				//newSequence.append(ControlPad.Button.values()[i]);
-				
-				output.add(sequence.append(getValues()[i]));
-				System.out.println("Button: "+ getValues()[i]);
-			}
-		}
-		
-		for(TinyBoyInputSequence sequence : inputs) {
-			System.out.println("old seq:" + sequence.toString());
-			
-		}
-		for(TinyBoyInputSequence sequence : output) {
-			System.out.println("new seq:" + sequence.toString());
-			
-		}
+  }
 
-		return output;
-	}
+  /**
+   * Prunes the given list of inputs by removing any input that has the same state
+   * as another input in the list. The method compares the byte arrays (the third
+   * element in each Triple) to check for equality. Inputs are considered
+   * duplicates if their byte arrays are equal.
+   *
+   * @param inputs An ArrayList of Triple objects, where each Triple contains a
+   *               TinyBoyInputSequence, a BitSet, and a byte array representing
+   *               the input state.
+   * @return An ArrayList of pruned Triple objects, where each Triple contains a
+   *         TinyBoyInputSequence, a BitSet, and a byte array representing the
+   *         input state with duplicates removed.
+   */
+  public static ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> pruneInputs(
+      ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> inputs) {
 
-	/**
-	 * Checks if every item in the two input integer arrays are equal to each other.
-	 *
-	 * @param arr1 the first integer array to compare
-	 * @param arr2 the second integer array to compare
-	 * @return true if every item in both arrays is equal, false otherwise
-	 */
-	public static boolean areArraysEqual(byte[] arr1, byte[] arr2) {
-	    if (arr1.length != arr2.length) {
-	        return false;
-	    }
-	    
-	    for (int i = 0; i < arr1.length; i++) {
-	        if (arr1[i] != arr2[i]) {
-	            return false;
-	        }
-	    }
-	    
-	    return true;
-	}
+    ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> prunedInputs = new ArrayList<>();
 
-	/**
-	 * Check whether a given input sequence is completely subsumed by another.
-	 *
-	 * @param lhs The one which may be subsumed.
-	 * @param rhs The one which may be subsuming.
-	 * @return True if lhs subsumed by rhs, false otherwise.
-	 */
-	public static boolean subsumedBy(BitSet lhs, BitSet rhs) {
-		for (int i = lhs.nextSetBit(0); i >= 0; i = lhs.nextSetBit(i + 1)) {
-			if (!rhs.get(i)) {
-				return false;
-			}
-		}
-		return true;
-	}
+    outerLoop: for (Triple<TinyBoyInputSequence, BitSet, byte[]> input1 : inputs) {
+      byte[] recordedState1 = input1.third();
+//      BitSet recordedCoverage1 = input1.second();
+      for (Triple<TinyBoyInputSequence, BitSet, byte[]> input2 : inputs) {
+        if (input1 != input2) {
+          byte[] recordedState2 = input2.third();
+//          BitSet recordedCoverage2 = input2.second();
+          if (Arrays.equals(recordedState1, recordedState2)) {
+            continue outerLoop;
+          }
+//          else if (subsumedBy(recordedCoverage1, recordedCoverage2)) {
+//            continue outerLoop;
+//          }
+        }
+      }
+      prunedInputs.add(input1);
+    }
 
-	/**
-	 * Reduce a given set of items to at most <code>n</code> inputs by randomly
-	 * sampling.
-	 *
-	 * @param inputs List of inputs to sample from.
-	 * @param n      Size of inputs after reduction.
-	 */
-	private static <T> void randomSample(List<T> inputs, int n) {
-		// Randomly shuffle inputs
-		Collections.shuffle(inputs);
-		// Remove inputs until only n remain
-		while (inputs.size() > n) {
-			inputs.remove(inputs.size() - 1);
-		}
-	}
+    return prunedInputs;
+  }
+
+  /**
+   * Converts a list of Triple objects containing TinyBoyInputSequence, BitSet,
+   * and byte array into a list of TinyBoyInputSequence objects. The method
+   * extracts the first element of each Triple (the TinyBoyInputSequence) and adds
+   * it to a new ArrayList.
+   *
+   * @param inputs An ArrayList of Triple objects, where each Triple contains a
+   *               TinyBoyInputSequence, a BitSet, and a byte array representing
+   *               the input state.
+   * @return An ArrayList of TinyBoyInputSequence objects extracted from the input
+   *         list of Triple objects.
+   */
+  public static ArrayList<TinyBoyInputSequence> convertTripleToSequence(
+      ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> inputs) {
+    ArrayList<TinyBoyInputSequence> output = new ArrayList<>();
+
+    for (Triple<TinyBoyInputSequence, BitSet, byte[]> input : inputs) {
+      output.add(input.first);
+    }
+    return output;
+  }
+
+  /**
+   * Appends one additional ControlPad.Button value to each input sequence in the
+   * given list and returns a new list of TinyBoyInputSequence objects. This
+   * method also increments the sequence length by 1. The appended button values
+   * are taken from the ControlPad.Button enumeration.
+   *
+   * @param inputs An ArrayList of TinyBoyInputSequence objects to be extended by
+   *               one additional button value.
+   * @return An ArrayList of TinyBoyInputSequence objects with one additional
+   *         button value appended to each input sequence.
+   */
+  public ArrayList<TinyBoyInputSequence> addOneToAllSequences(
+      ArrayList<TinyBoyInputSequence> inputs) {
+    this.seqLength++;
+    ArrayList<TinyBoyInputSequence> output = new ArrayList<>();
+
+    for (TinyBoyInputSequence sequence : inputs) {
+      for (int i = 0; i < NUM_BUTTONS; i++) {
+        output.add(sequence.append(ControlPad.Button.values()[i]));
+      }
+    }
+    return output;
+  }
+
+  /**
+   * Check whether a given input sequence is completely subsumed by another.
+   *
+   * @param lhs The one which may be subsumed.
+   * @param rhs The one which may be subsuming.
+   * @return True if lhs subsumed by rhs, false otherwise.
+   */
+  public static boolean subsumedBy(BitSet lhs, BitSet rhs) {
+    for (int i = lhs.nextSetBit(0); i >= 0; i = lhs.nextSetBit(i + 1)) {
+      if (!rhs.get(i)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Reduce a given set of items to at most <code>n</code> inputs by randomly
+   * sampling.
+   *
+   * @param inputs List of inputs to sample from.
+   * @param n      Size of inputs after reduction.
+   */
+  private static <T> void randomSample(List<T> inputs, int n) {
+    // Randomly shuffle inputs
+    Collections.shuffle(inputs);
+    // Remove inputs until only n remain
+    while (inputs.size() > n) {
+      inputs.remove(inputs.size() - 1);
+    }
+  }
 }
