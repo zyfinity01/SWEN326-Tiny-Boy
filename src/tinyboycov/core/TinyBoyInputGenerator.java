@@ -6,9 +6,7 @@ import java.util.BitSet;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-
 import org.eclipse.jdt.annotation.Nullable;
-
 import tinyboy.core.ControlPad;
 import tinyboy.core.TinyBoyInputSequence;
 import tinyboy.util.AutomatedTester;
@@ -39,7 +37,8 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
   /**
    * Inputs that are recorded for pruning purposes.
    */
-  private ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> recordedInputs = new ArrayList<>();
+  private ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> recordedInputs =
+      new ArrayList<>();
 
   /**
    * record what the number of inputs were before worklist is emptied.
@@ -88,7 +87,6 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
     }
 
     this.numberOfInputs = this.worklist.size();
-    
   }
 
   /**
@@ -166,7 +164,9 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
     if (this.numberOfInputs == this.recordedInputs.size()) {
       this.worklist = addOneToAllSequences(
           convertTripleToSequence(pruneInputs(this.recordedInputs)));
-      //randomSample(this.worklist, 30);
+      if (this.worklist.size() > 300) {
+        randomSample(this.worklist, 300);
+      }
       this.recordedInputs.clear();
       this.numberOfInputs = this.worklist.size();
 
@@ -218,6 +218,7 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
       prunedInputs = new ArrayList<>(prunedInputs.subList(0, elementsToKeep));
     }
     
+
     
     return prunedInputs;
   }
