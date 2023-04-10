@@ -39,8 +39,7 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
   /**
    * Inputs that are recorded for pruning purposes.
    */
-  private ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> recordedInputs =
-      new ArrayList<>();
+  private ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> recordedInputs = new ArrayList<>();
 
   /**
    * record what the number of inputs were before worklist is emptied.
@@ -89,6 +88,7 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
     }
 
     this.numberOfInputs = this.worklist.size();
+    
   }
 
   /**
@@ -161,15 +161,16 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
    */
   @Override
   public void record(TinyBoyInputSequence input, BitSet coverage, byte[] state) {
+
     this.recordedInputs.add(new Triple<>(input, coverage, state));
     if (this.numberOfInputs == this.recordedInputs.size()) {
       this.worklist = addOneToAllSequences(
           convertTripleToSequence(pruneInputs(this.recordedInputs)));
-      randomSample(this.worklist, 50);
+      //randomSample(this.worklist, 30);
       this.recordedInputs.clear();
       this.numberOfInputs = this.worklist.size();
-    }
 
+    }
   }
 
   /**
@@ -189,25 +190,35 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
       ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> inputs) {
 
     ArrayList<Triple<TinyBoyInputSequence, BitSet, byte[]>> prunedInputs = new ArrayList<>();
-
     outerLoop: for (Triple<TinyBoyInputSequence, BitSet, byte[]> input1 : inputs) {
       byte[] recordedState1 = input1.third();
-//      BitSet recordedCoverage1 = input1.second();
       for (Triple<TinyBoyInputSequence, BitSet, byte[]> input2 : inputs) {
         if (input1 != input2) {
           byte[] recordedState2 = input2.third();
-//          BitSet recordedCoverage2 = input2.second();
           if (Arrays.equals(recordedState1, recordedState2)) {
             continue outerLoop;
           }
-//          else if (subsumedBy(recordedCoverage1, recordedCoverage2)) {
-//            continue outerLoop;
-//          }
         }
       }
       prunedInputs.add(input1);
     }
 
+    // Subsumption
+    Collections.sort(inputs, (a, b) -> {
+      if (subsumedBy(a.second(), b.second())) {
+        return -1;
+      }
+      return 1;
+    });
+    
+    
+    // Keep only the first 5 elements
+    int elementsToKeep = 5;
+    if (prunedInputs.size() > elementsToKeep) {
+      prunedInputs = new ArrayList<>(prunedInputs.subList(0, elementsToKeep));
+    }
+    
+    
     return prunedInputs;
   }
 
@@ -265,8 +276,10 @@ public class TinyBoyInputGenerator implements AutomatedTester.InputGenerator<Tin
    * @return True if lhs subsumed by rhs, false otherwise.
    */
   public static boolean subsumedBy(BitSet lhs, BitSet rhs) {
+    BitSet rhsWithoutLhs = (BitSet) rhs.clone();
+    rhsWithoutLhs.andNot(lhs);
     for (int i = lhs.nextSetBit(0); i >= 0; i = lhs.nextSetBit(i + 1)) {
-      if (!rhs.get(i)) {
+      if (!rhsWithoutLhs.get(i)) {
         return false;
       }
     }
